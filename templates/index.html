@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TalentFlow AI - Gestion Intelligente des CV</title>
+    <!-- Google Fonts: Cairo (Arabic) & Inter (Latin) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <i data-lucide="cpu" class="logo-icon"></i>
+                <div class="logo-text">
+                    <span class="brand-name">TalentFlow <span class="highlight">AI</span></span>
+                    <span class="sub-brand">Système Interne RH</span>
+                </div>
+            </div>
+            
+            <nav class="nav-links">
+                <a href="#dashboard" class="nav-item active" id="nav-dashboard">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Tableau de Bord</span>
+                </a>
+                <a href="#candidates" class="nav-item" id="nav-candidates">
+                    <i data-lucide="users"></i>
+                    <span>Météo des Profils</span>
+                </a>
+                <a href="#pipeline" class="nav-item" id="nav-pipeline">
+                    <i data-lucide="git-pull-request"></i>
+                    <span>Pipeline Recrutement</span>
+                </a>
+                <a href="#upload" class="nav-item" id="nav-upload">
+                    <i data-lucide="file-up"></i>
+                    <span>Télécharger CV</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">RH</div>
+                    <div class="user-info">
+                        <span class="user-name">Recruteur Principal</span>
+                        <span class="user-role">Administrateur</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <h1 id="page-title">Tableau de Bord</h1>
+                <div class="topbar-actions">
+                    <button class="btn btn-secondary" id="btn-export-all-excel">
+                        <i data-lucide="file-spreadsheet"></i>
+                        <span>Exporter Excel</span>
+                    </button>
+                    <div class="system-time">
+                        <i data-lucide="clock"></i>
+                        <span id="current-time">18:00</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <section id="view-dashboard" class="view-section active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon purple"><i data-lucide="users"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-label">Total Candidats</span>
+                            <span class="stat-value" id="stat-total-candidates">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i data-lucide="sparkles"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-label">Meilleur AI Score</span>
+                            <span class="stat-value" id="stat-top-ai-score">0%</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon emerald"><i data-lucide="check-circle-2"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-label">Candidats Acceptés</span>
+                            <span class="stat-value" id="stat-accepted-candidates">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange"><i data-lucide="percent"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-label">Moyenne AI Score</span>
+                            <span class="stat-value" id="stat-avg-ai-score">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-charts-grid">
+                    <div class="chart-card">
+                        <h3>Distribution des Compétences</h3>
+                        <div class="chart-container">
+                            <canvas id="skillsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Entonnoir de Recrutement</h3>
+                        <div class="chart-container">
+                            <canvas id="pipelineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top 10 Candidates Panel -->
+                <div class="top-candidates-panel card">
+                    <div class="panel-header">
+                        <h3><i data-lucide="award" class="icon-accent"></i> Top 10 Candidats - Évaluation Globale</h3>
+                        <span class="badge badge-purple">Classé par AI Score</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Candidat</th>
+                                    <th>Wilaya</th>
+                                    <th>Expérience</th>
+                                    <th>Compétences Clés</th>
+                                    <th>AI Score</th>
+                                    <th>Étape Pipeline</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="top-candidates-table-body">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Candidates View (Météo des Profils) -->
+            <section id="view-candidates" class="view-section">
+                <!-- Search and Filters -->
+                <div class="search-filters-bar card">
+                    <div class="search-row">
+                        <div class="search-input-wrapper">
+                            <i data-lucide="search" class="search-icon"></i>
+                            <input type="text" id="search-input" placeholder="Rechercher par exemple : 'Développeur Flutter 3 ans Tlemcen'...">
+                            <button class="btn btn-primary" id="btn-search">Rechercher</button>
+                        </div>
+                    </div>
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <label><i data-lucide="map-pin"></i> Wilaya</label>
+                            <select id="filter-wilaya">
+                                <option value="">Toutes</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label><i data-lucide="code-2"></i> Compétence</label>
+                            <select id="filter-skill">
+                                <option value="">Toutes</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label><i data-lucide="briefcase"></i> Expérience Min</label>
+                            <select id="filter-experience">
+                                <option value="">Toutes</option>
+                                <option value="1">1+ an</option>
+                                <option value="3">3+ ans</option>
+                                <option value="5">5+ ans</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-ghost" id="btn-reset-filters">Réinitialiser</button>
+                    </div>
+                    <div class="search-feedback" id="search-query-feedback" style="display: none;">
+                        <!-- AI query parsing feedback -->
+                    </div>
+                </div>
+
+                <!-- Candidates Grid -->
+                <div class="candidates-grid" id="candidates-cards-container">
+                    <!-- Dynamic cards -->
+                </div>
+            </section>
+
+            <!-- Recruitment Pipeline (Kanban) -->
+            <section id="view-pipeline" class="view-section">
+                <div class="kanban-board">
+                    <!-- New -->
+                    <div class="kanban-column" id="col-New" ondragover="allowDrop(event)" ondrop="drop(event, 'New')">
+                        <div class="kanban-header color-new">
+                            <span>Nouveau</span>
+                            <span class="kanban-count" id="count-New">0</span>
+                        </div>
+                        <div class="kanban-cards-container" id="cards-New"></div>
+                    </div>
+
+                    <!-- Reviewed -->
+                    <div class="kanban-column" id="col-Reviewed" ondragover="allowDrop(event)" ondrop="drop(event, 'Reviewed')">
+                        <div class="kanban-header color-reviewed">
+                            <span>Revu</span>
+                            <span class="kanban-count" id="count-Reviewed">0</span>
+                        </div>
+                        <div class="kanban-cards-container" id="cards-Reviewed"></div>
+                    </div>
+
+                    <!-- Interview -->
+                    <div class="kanban-column" id="col-Interview" ondragover="allowDrop(event)" ondrop="drop(event, 'Interview')">
+                        <div class="kanban-header color-interview">
+                            <span>Entretien</span>
+                            <span class="kanban-count" id="count-Interview">0</span>
+                        </div>
+                        <div class="kanban-cards-container" id="cards-Interview"></div>
+                    </div>
+
+                    <!-- Test -->
+                    <div class="kanban-column" id="col-Test" ondragover="allowDrop(event)" ondrop="drop(event, 'Test')">
+                        <div class="kanban-header color-test">
+                            <span>Évaluation</span>
+                            <span class="kanban-count" id="count-Test">0</span>
+                        </div>
+                        <div class="kanban-cards-container" id="cards-Test"></div>
+                    </div>
+
+                    <!-- Accepted -->
+                    <div class="kanban-column" id="col-Accepted" ondragover="allowDrop(event)" ondrop="drop(event, 'Accepted')">
+                        <div class="kanban-header color-accepted">
+                            <span>Accepté</span>
+                            <span class="kanban-count" id="count-Accepted">0</span>
+                        </div>
+                        <div class="kanban-cards-container" id="cards-Accepted"></div>
+                    </div>
+
+                    <!-- Rejected -->
+                    <div class="kanban-column" id="col-Rejected" ondragover="allowDrop(event)" ondrop="drop(event, 'Rejected')">
+                        <div class="kanban-header color-rejected">
+                            <span>Refusé</span>
+                            <span class="kanban-count" id="count-Rejected">0</span>
+                        </div>
+                        <div class="kanban-cards-container" id="cards-Rejected"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Upload CV View -->
+            <section id="view-upload" class="view-section">
+                <div class="upload-container card">
+                    <div class="upload-area" id="drag-drop-zone">
+                        <i data-lucide="upload-cloud" class="upload-big-icon animate-pulse"></i>
+                        <h3>Faites glisser votre fichier CV ici</h3>
+                        <p>Prend en charge les formats <strong>PDF</strong> et <strong>DOCX</strong> uniquement</p>
+                        <span class="divider">ou</span>
+                        <input type="file" id="file-input-selector" accept=".pdf,.docx" style="display: none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('file-input-selector').click()">
+                            Parcourir les fichiers
+                        </button>
+                    </div>
+
+                    <!-- Upload and Parse Progress -->
+                    <div class="upload-progress-container" id="upload-progress-box" style="display: none;">
+                        <div class="progress-info">
+                            <span id="upload-status-text"><i data-lucide="loader" class="animate-spin text-purple"></i> Téléchargement du fichier...</span>
+                            <span id="upload-percentage">0%</span>
+                        </div>
+                        <div class="progress-bar-wrapper">
+                            <div class="progress-bar-fill" id="upload-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <ul class="parsing-steps">
+                            <li id="step-1" class="pending"><i data-lucide="circle"></i> Lecture du document brut</li>
+                            <li id="step-2" class="pending"><i data-lucide="circle"></i> Extraction des entités avec spaCy (NER)</li>
+                            <li id="step-3" class="pending"><i data-lucide="circle"></i> Calcul de l'AI Match Score & Analyse du profil</li>
+                            <li id="step-4" class="pending"><i data-lucide="circle"></i> Vérification des doublons</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Duplicate Warning Modal Overlay -->
+                <div class="modal-overlay" id="duplicate-warning-modal">
+                    <div class="modal-card warning">
+                        <div class="modal-header">
+                            <i data-lucide="alert-triangle" class="warning-icon"></i>
+                            <h3>Doublon potentiellement détecté !</h3>
+                        </div>
+                        <div class="modal-body">
+                            <p id="duplicate-warning-message">Un CV similaire a été détecté dans le système.</p>
+                            <div class="duplicate-details-card">
+                                <div><strong id="duplicate-cand-name">Nom : -</strong></div>
+                                <div><span id="duplicate-reason-text">Raison : Similarité du fichier</span></div>
+                            </div>
+                            <p class="modal-question">Comment souhaitez-vous procéder ?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-danger" id="btn-duplicate-overwrite">
+                                <i data-lucide="refresh-cw"></i> Remplacer l'existant
+                            </button>
+                            <button class="btn btn-secondary" id="btn-duplicate-keep-both">
+                                <i data-lucide="copy"></i> Conserver les deux
+                            </button>
+                            <button class="btn btn-ghost" id="btn-duplicate-cancel">Annuler</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Candidate Detailed Profile Slide-over / Modal -->
+    <div class="profile-overlay" id="candidate-profile-modal">
+        <div class="profile-slideout">
+            <!-- Modal Header -->
+            <div class="profile-header-actions">
+                <button class="btn-circle" id="btn-close-profile" title="Fermer">
+                    <i data-lucide="x"></i>
+                </button>
+                <div class="action-buttons-right">
+                    <button class="btn btn-secondary" id="btn-print-cv-report">
+                        <i data-lucide="printer"></i>
+                        <span>Rapport PDF</span>
+                    </button>
+                    <button class="btn btn-danger btn-sm" id="btn-delete-candidate">
+                        <i data-lucide="trash-2"></i>
+                        <span>Supprimer</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Printable & Viewable Profile Content -->
+            <div class="profile-scroll-content" id="printable-profile-content">
+                
+                <!-- PDF Branding Header (Visible only when printing) -->
+                <div class="pdf-branding-header">
+                    <div class="pdf-logo">
+                        <i data-lucide="cpu" style="width: 28px; height: 28px; color: #6366f1;"></i>
+                        <span style="font-size: 20px; font-weight: 700; color: #0f172a; margin-left: 8px;">TalentFlow <span style="color: #6366f1;">AI</span></span>
+                    </div>
+                    <div class="pdf-meta">
+                        <div style="font-weight: 600;">Rapport d'Évaluation du Candidat</div>
+                        <div style="font-size: 11px; color: #64748b;" id="pdf-report-date">Généré le: -</div>
+                    </div>
+                </div>
+
+                <div class="profile-main-grid">
+                    <!-- Left Column: Details & Timeline -->
+                    <div class="profile-left-col">
+                        <div class="candidate-identity-card">
+                            <div class="profile-avatar-large" id="profile-avatar">C</div>
+                            <div class="identity-info">
+                                <h2 id="profile-name">Nom du Candidat</h2>
+                                <p class="profile-title" id="profile-extracted-role">Développeur</p>
+                                <span class="profile-location"><i data-lucide="map-pin"></i> <span id="profile-wilaya">Wilaya</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Contact Details -->
+                        <div class="profile-section">
+                            <h4><i data-lucide="contact"></i> Coordonnées</h4>
+                            <div class="contact-grid">
+                                <div class="contact-item">
+                                    <i data-lucide="phone"></i>
+                                    <span id="profile-phone">Téléphone</span>
+                                </div>
+                                <div class="contact-item">
+                                    <i data-lucide="mail"></i>
+                                    <span id="profile-email">Email</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Professional Timeline -->
+                        <div class="profile-section">
+                            <h4><i data-lucide="briefcase"></i> Expérience Professionnelle</h4>
+                            <div class="timeline" id="profile-experience-timeline">
+                                <!-- Dynamic experiences -->
+                            </div>
+                        </div>
+
+                        <!-- Academic Timeline -->
+                        <div class="profile-section">
+                            <h4><i data-lucide="graduation-cap"></i> Diplômes et Formations</h4>
+                            <div class="timeline education" id="profile-education-timeline">
+                                <!-- Dynamic education -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: AI Score, Insights & Notes -->
+                    <div class="profile-right-col">
+                        <!-- AI Match Score Card -->
+                        <div class="ai-score-card-detailed">
+                            <div class="ai-score-circular-wrapper">
+                                <svg class="ai-score-ring" width="120" height="120">
+                                    <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+                                    <circle class="ring-fill" id="profile-ring-fill" cx="60" cy="60" r="50" stroke-dasharray="314.15" stroke-dashoffset="314.15"></circle>
+                                </svg>
+                                <div class="ai-score-center-text">
+                                    <span class="score-percent" id="profile-score-val">0%</span>
+                                    <span class="score-lbl">AI Score</span>
+                                </div>
+                            </div>
+                            <div class="ai-score-details-text">
+                                <h5>Score d'Adéquation</h5>
+                                <p>Calculé par le moteur NLP selon le poste cible et le profil.</p>
+                            </div>
+                        </div>
+
+                        <!-- AI Automatic Resume Summary -->
+                        <div class="profile-section summary-box">
+                            <h4><i data-lucide="sparkles" class="icon-accent"></i> Résumé Automatique de l'AI</h4>
+                            <p id="profile-ai-summary">Analyse en cours...</p>
+                        </div>
+
+                        <!-- Strengths & Weaknesses -->
+                        <div class="profile-section">
+                            <div class="insights-grid">
+                                <div class="insight-box strengths">
+                                    <h5><i data-lucide="check" class="emerald"></i> Points Forts</h5>
+                                    <ul id="profile-strengths-list"></ul>
+                                </div>
+                                <div class="insight-box weaknesses">
+                                    <h5><i data-lucide="alert-circle" class="orange"></i> Points Faibles</h5>
+                                    <ul id="profile-weaknesses-list"></ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Core Skills & Languages -->
+                        <div class="profile-section">
+                            <h4><i data-lucide="code-2"></i> Compétences Techniques</h4>
+                            <div class="skills-flex" id="profile-skills-list"></div>
+                        </div>
+
+                        <div class="profile-section">
+                            <h4><i data-lucide="languages"></i> Langues</h4>
+                            <div class="skills-flex languages" id="profile-languages-list"></div>
+                        </div>
+
+                        <!-- QR Code Area for CV report integration -->
+                        <div class="pdf-qr-section" id="profile-qr-box">
+                            <div class="qr-text">
+                                <h6>Vérification du profil</h6>
+                                <p>Scannez ce QR Code pour accéder à la version numérique en ligne avec notes de entretien.</p>
+                            </div>
+                            <div class="qr-svg-holder" id="profile-qr-svg">
+                                <!-- SVG QR Code injected here -->
+                            </div>
+                        </div>
+
+                        <!-- Recruiter Notes Section -->
+                        <div class="profile-section notes-section no-print">
+                            <h4><i data-lucide="message-square"></i> Notes de l'Entretien & Commentaires RH</h4>
+                            <textarea id="profile-notes-textarea" placeholder="Saisir les commentaires d'entretien, évaluation technique..."></textarea>
+                            <button class="btn btn-primary btn-sm" id="btn-save-notes">
+                                <i data-lucide="save"></i> Enregistrer les notes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast-container" id="toast-box"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

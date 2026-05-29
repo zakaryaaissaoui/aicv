@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pypdf
+python-docx
+jinja2
+openpyxl
+spacy
+qrcode
