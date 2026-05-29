@@ -1,5 +1,5 @@
 import re
-from parser_engine import WILAYAS, TECH_SKILLS
+from parser_engine import WILAYAS, TECH_SKILLS, SKILLS_KEYWORDS
 
 # Arabic to French Wilaya Mapping for search queries
 WILAYAS_AR_TO_FR = {
@@ -14,7 +14,7 @@ WILAYAS_AR_TO_FR = {
     "برج بوعريريج": "Bordj Bou Arréridj", "بومرداس": "Boumerdès", "الطارف": "El Tarf",
     "تندوف": "Tindouf", "تيسمسيلت": "Tissemsilt", "الوادي": "El Oued", "خنشلة": "Khenchela",
     "سوق أهراس": "Souk Ahras", "تيبازة": "Tipaza", "ميلة": "Mila", "عين الدفلى": "Aïn Defla",
-    "النعامة": "Naâma", "عين تموشنت": "Aïn Témouchent", "غرداية": "Ghardaïa", "غليزان": "Relizane",
+    "النعامة": "Naâma", "عين تموشنت": "Aïn Témouchent", "غرداية": "Ghardaïا", "غليزان": "Relizane",
     "المغير": "El M'Ghair", "تقرت": "Touggourt", "أولاد جلال": "Ouled Djellal", "بني عباس": "Béni Abbès",
     "عين صالح": "In Salah", "عين قزام": "In Guezzam", "جانت": "Djanet"
 }
@@ -26,6 +26,32 @@ def normalize_text(text):
     text = text.lower()
     text = re.sub(r'[^\w\s]', ' ', text)
     return " ".join(text.split())
+
+def extract_skills_from_query(query_str):
+    """
+    Intelligently extracts skills from query by matching against SKILLS_KEYWORDS patterns.
+    Supports both French and Arabic skill names and their regex patterns.
+    """
+    extracted_skills = []
+    query_lower = query_str.lower()
+    
+    for skill_name, patterns in SKILLS_KEYWORDS.items():
+        for pattern in patterns:
+            # Skip non-ASCII patterns (Arabic) if they're complex regex
+            if any(ord(c) > 127 for c in pattern):
+                # For Arabic patterns, do direct substring match (case-insensitive after normalization)
+                if pattern in query_lower:
+                    if skill_name not in extracted_skills:
+                        extracted_skills.append(skill_name)
+                    break
+            else:
+                # For French/English patterns, use regex word boundary
+                if re.search(r'\b' + pattern + r'\b', query_lower, re.IGNORECASE):
+                    if skill_name not in extracted_skills:
+                        extracted_skills.append(skill_name)
+                    break
+    
+    return extracted_skills
 
 def extract_query_parameters(query_str):
     """
@@ -55,19 +81,8 @@ def extract_query_parameters(query_str):
                 target_wilaya = fr_name
                 break
             
-    # 2. Extract tech skills
-    target_skills = []
-    for s in TECH_SKILLS:
-        pattern = r'\b' + re.escape(s.lower()) + r'\b'
-        if s == "C++":
-            pattern = r'c\+\+'
-        elif s == "C#":
-            pattern = r'c#'
-        elif s == ".NET":
-            pattern = r'\.net'
-            
-        if re.search(pattern, normalized_query):
-            target_skills.append(s)
+    # 2. Extract skills using intelligent pattern matching
+    target_skills = extract_skills_from_query(query_str)
 
     # 3. Extract experience years (e.g. "3 ans", "3 years", "3ans", "exp 3", "3 سنوات")
     experience_years = None
@@ -103,6 +118,7 @@ def rank_candidates(candidates, query_str):
     - Location match with PENALTY (weight 25, penalty -15)
     - Normalized experience distance (weight 20)
     - Text search keyword match (weight 2)
+    - Sector relevance for non-IT queries
     """
     if not query_str or not query_str.strip():
         # If query is empty, return candidates ranked by AI score
@@ -122,7 +138,8 @@ def rank_candidates(candidates, query_str):
             "skills_match": 0.0,
             "location_match": 0.0,
             "experience_match": 0.0,
-            "keyword_match": 0.0
+            "keyword_match": 0.0,
+            "sector_match": 0.0
         }
         
         # 1. Skills Matching with BOOST
@@ -179,6 +196,25 @@ def rank_candidates(candidates, query_str):
         kw_score = keyword_hits * 2.0
         relevance_score += kw_score
         details["keyword_match"] += kw_score
+
+        # 5. Sector-specific match (for non-IT profiles)
+        cand_sector = candidate.get("sector", "administration")
+        if any(skill in query_skills for skill in query_skills):
+            # Check if candidate sector matches query sector
+            sector_skills = {
+                "it": ["Flutter", "Python", "React", "SQL", "Réseaux & Maintenance", "Support IT"],
+                "commercial": ["Vente & Négociation", "Relation Client", "Prospection", "Marketing Digital"],
+                "administration": ["Bureautique", "Saisie de données", "Archivage", "Secrétariat"],
+                "rh": ["Recrutement", "Gestion du Personnel", "Gestion de la Paie"],
+                "finance": ["Comptabilité", "Gestion Financière", "Audit & Contrôle"]
+            }
+            
+            for q_skill in query_skills:
+                for sector, skills_list in sector_skills.items():
+                    if q_skill in skills_list and cand_sector == sector:
+                        relevance_score += 8.0
+                        details["sector_match"] += 8.0
+                        break
 
         # Add AI Score base influence (normalized to 5 points max)
         ai_influence = (candidate.get("ai_score", 0) / 100.0) * 5.0
