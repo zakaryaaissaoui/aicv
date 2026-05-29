@@ -219,9 +219,9 @@ def classify_sector_and_role(text, skills):
             
     # 2. Score based on keywords in the text
     keywords = {
-        "it": ["développeur", "developpeur", "developer", "informatique", "webmaster", "programmer", "network", "réseau", "maintenance", "مطور", "برمجة", "مبرمج", "إعلام آلي", "اعlam y", "شبكات"],
-        "commercial": ["technico-commercial", "technico commercial", "commercial", "vendeur", "sales", "marketing", "prospection", "négociation", "مبيعات", "تجاري", "تسوق", "تسويق", "بائع", "مندوب"],
-        "administration": ["assistant administratif", "assistante administrative", "secrétaire", "secretaire", "secrétariat", "secretariat", "saisie", "bureautique", "archiviste", "مساعد إداري", "مساعدة إدارية", "سكرتارية", "إدخال بيانات", "أرشif", "أرشيف"],
+        "it": ["développeur", "developpeur", "developer", "informatique", "webmaster", "programmer", "network", "réseau", "maintenance", "مطور", "برمجة", "مبرمج", "إعلام آلي"],
+        "commercial": ["technico-commercial", "technico commercial", "commercial", "vendeur", "sales", "marketing", "prospection", "négociation", "مبيعات", "تجاري", "تسوق", "تسويق"],
+        "administration": ["assistant administratif", "assistante administrative", "secrétaire", "secretaire", "secrétariat", "secretariat", "saisie", "bureautique", "archiviste", "مساعد إداري"],
         "rh": ["ressources humaines", "recrutement", "recruteur", "paie", "rh", "hr", "human resources", "موارد بشرية", "توظيف", "شؤون الموظفين"],
         "finance": ["comptable", "comptabilité", "comptabilite", "comptes", "financier", "finance", "audit", "facturation", "محاسب", "محاسبة", "مالية", "خزينة", "كشف"]
     }
@@ -504,6 +504,9 @@ def parse_resume_text(text, filename=""):
         "skills": skills,
         "languages": languages,
         "wilaya": wilaya,
+        "sector": sector,  # NEW: Added sector to output
+        "role_fr": role_fr,  # NEW: Added French role
+        "role_ar": role_ar,  # NEW: Added Arabic role
         "ai_score": ai_score,
         "ai_summary": ai_summary,
         "strengths": strengths,
@@ -533,6 +536,7 @@ WILAYAS_FR_TO_AR = {
 def generate_ai_insights(name, skills, exp_years, wilaya, education, orgs=None, sector="administration", role_ar="مساعد إداري"):
     """
     Generates structured AI insights (summary in Arabic, strengths, weaknesses, overall score).
+    Customized by sector to provide relevant feedback.
     """
     # Years of experience representation in Arabic
     if exp_years == 0:
@@ -557,8 +561,17 @@ def generate_ai_insights(name, skills, exp_years, wilaya, education, orgs=None, 
     elif wilaya_ar == "المدية":
         wilaya_prefix = "بالمدية"
 
-    # Extract key skills for Arabic summary
-    skills_subset = [s for s in skills if s.lower() not in ["git", "github", "sql", "html", "css", "bureautique"]]
+    # Extract key skills for Arabic summary (filter out generic tools)
+    sector_generic_skills = {
+        "it": ["git", "github", "sql", "html", "css"],
+        "commercial": ["bureautique"],
+        "administration": ["bureautique"],
+        "rh": ["bureautique"],
+        "finance": ["bureautique"]
+    }
+    
+    generic_list = sector_generic_skills.get(sector, ["git", "github", "sql", "html", "css", "bureautique"])
+    skills_subset = [s for s in skills if s.lower() not in generic_list]
     if not skills_subset:
         skills_subset = skills
         
@@ -569,8 +582,16 @@ def generate_ai_insights(name, skills, exp_years, wilaya, education, orgs=None, 
     else:
         skills_ar = "المهارات المهنية"
 
-    # Summary: e.g. "مساعد إداري ذو خبرة سنتين بالجزائر العاصمة، يمتلك مهارات قوية في Bureautique."
-    summary = f"{role_ar} {exp_str} {wilaya_prefix}، يمتلك مهارات قوية في {skills_ar}."
+    # Sector-specific summary templates
+    sector_templates = {
+        "it": f"{role_ar} {exp_str} {wilaya_prefix}، متخصص في {skills_ar} مع خبرة تقنية متينة.",
+        "commercial": f"{role_ar} {exp_str} {wilaya_prefix}، متمكن من {skills_ar} بقدرات تجارية قوية.",
+        "administration": f"{role_ar} {exp_str} {wilaya_prefix}، متقن في {skills_ar} مع إتقان الأدوات الإدارية.",
+        "rh": f"{role_ar} {exp_str} {wilaya_prefix}، متخصص في {skills_ar} مع فهم عميق للموارد البشرية.",
+        "finance": f"{role_ar} {exp_str} {wilaya_prefix}، متقن في {skills_ar} مع خبرة مالية ومحاسبية."
+    }
+    
+    summary = sector_templates.get(sector, f"{role_ar} {exp_str} {wilaya_prefix}، يمتلك مهارات قوية في {skills_ar}.")
 
     # Add organizations if any
     if orgs:
@@ -578,7 +599,7 @@ def generate_ai_insights(name, skills, exp_years, wilaya, education, orgs=None, 
         if non_edu_orgs:
             summary += f" لديه تجربة مهنية مع جهات مثل {'، '.join(non_edu_orgs[:2])}."
 
-    # 2. Strengths and Weaknesses
+    # 2. Strengths and Weaknesses (SECTOR-SPECIFIC)
     strengths = []
     weaknesses = []
     score = 50 # base score
@@ -608,33 +629,33 @@ def generate_ai_insights(name, skills, exp_years, wilaya, education, orgs=None, 
     strengths.append("Compétences multilingues (Français/Anglais)")
     score += 5
     
-    # Sector specific strengths / weaknesses
+    # Sector specific strengths / weaknesses with CUSTOMIZED feedback
     if sector == "it":
-        if any(s in skills for s in ["SQL", "Réseaux & Maintenance", "Support IT", "Python", "React"]):
+        if any(s in skills for s in ["SQL", "Réseaux & Maintenance", "Support IT", "Python", "React", "Flutter"]):
             strengths.append("Maîtrise des outils informatiques et de la programmation/systèmes")
             score += 5
         else:
             weaknesses.append("Besoin de renforcement sur les technologies modernes")
     elif sector == "commercial":
-        if any(s in skills for s in ["Vente & Négociation", "Relation Client", "Prospection"]):
+        if any(s in skills for s in ["Vente & Négociation", "Relation Client", "Prospection", "Marketing Digital"]):
             strengths.append("Fortes compétences commerciales et aisance relationnelle")
             score += 5
         else:
             weaknesses.append("Profil commercial à développer sur le plan de la négociation active")
     elif sector == "administration":
-        if any(s in skills for s in ["Bureautique", "Saisie de données", "Secrétariat"]):
+        if any(s in skills for s in ["Bureautique", "Saisie de données", "Secrétariat", "Archivage"]):
             strengths.append("Excellente maîtrise des outils bureautiques et administratifs")
             score += 5
         else:
             weaknesses.append("Nécessite une mise à niveau sur les outils de bureautique (Excel/Word)")
     elif sector == "rh":
-        if any(s in skills for s in ["Recrutement", "Gestion du Personnel"]):
+        if any(s in skills for s in ["Recrutement", "Gestion du Personnel", "Gestion de la Paie"]):
             strengths.append("Bonne maîtrise de la gestion du personnel et des processus RH")
             score += 5
         else:
             weaknesses.append("Expérience limitée sur les aspects juridiques et paie des RH")
     elif sector == "finance":
-        if any(s in skills for s in ["Comptabilité", "Gestion Financière"]):
+        if any(s in skills for s in ["Comptabilité", "Gestion Financière", "Audit & Contrôle"]):
             strengths.append("Profil solide en gestion comptable et financière")
             score += 5
         else:
@@ -645,7 +666,7 @@ def generate_ai_insights(name, skills, exp_years, wilaya, education, orgs=None, 
         if non_edu_orgs:
             strengths.append(f"Expérience professionnelle avec {non_edu_orgs[0]}")
             score += 3
-        
+         
     # Cap score between 35 and 98 for realistic parsing scores
     score = max(35, min(98, score))
     
